@@ -44,7 +44,8 @@ sub fb_auth
 		if ($text !~ /.{6,6}/)
 		{
 			Irssi::active_win()->print("Please, make sure you are logged in to facebook and go to:");
-			Irssi::active_win()->print("http://www.facebook.com/code_gen.php?v=1.0&api_key=$api_key");
+			Irssi::active_win()->print("https://graph.facebook.com/oauth/authorize?client_id=$api_key");
+			#Irssi::active_win()->print("http://www.facebook.com/code_gen.php?v=1.0&api_key=$api_key");
 			Irssi::active_win()->print("Copy the code, and use /irssibook_auth <code>");
 		}
 		else
