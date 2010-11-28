@@ -41,16 +41,7 @@ sub fb_auth
 	}
 	else
 	{
-		if ($text !~ /.{6,6}/)
-		{
-			Irssi::active_win()->print("Please, make sure you are logged in to facebook and go to:");
-			Irssi::active_win()->print("https://graph.facebook.com/oauth/authorize?client_id=$api_key");
-			#Irssi::active_win()->print("http://www.facebook.com/code_gen.php?v=1.0&api_key=$api_key");
-			Irssi::active_win()->print("Copy the code, and use /irssibook_auth <code>");
-		}
-		else
-		{
-			my $token = $text;
+			my $token = $client->auth->create_token;
 			$client->auth->get_session( $token );
 
 			Irssi::settings_set_str('irssibook_session_uid', $client->session_uid);
@@ -62,7 +53,6 @@ sub fb_auth
 			Irssi::active_win()->print("Now please go to:");
 			Irssi::active_win()->print("http://www.facebook.com/authorize.php?api_key=$api_key&v=1.0&ext_perm=offline_access,user_status");
 			Irssi::active_win()->print("To allow this application access to update your status");
-		}
 	}
 }
 
