@@ -8,123 +8,96 @@
 use strict;
 use vars qw($VERSION %IRSSI);
 use Irssi qw(command_bind signal_add settings_add_str settings_get_str settings_set_str);
-use WWW::Facebook::API;
-use Data::Dumper;
+use JSON;
+# Use LWP::UserAgent to do status updates via GRAPH API POST
+use LWP::UserAgent; 
+my $ua = new LWP::UserAgent;
 
-$VERSION = '0.2';
+$VERSION = '0.3';
 
 %IRSSI = (
         authors         => 'Bert Deferme',
         contact         => 'fbook@bdeferme.net',
         name            => 'irssibook.pl',
         description     => 'This script allows you to change your facebook status from within your irssi.',
+	url		=> 'http://projects.bdeferme.net/projects/irssibook',
         license         => 'GPL',
 );
 
+# API_KEY
 my $api_key = '994152b1c0bb21fb796c69febf3f059d';
-my $secret = '0fe2caa463afad261fbefae66f5a6a47';
 
-my $client = WWW::Facebook::API->new(
-	desktop => 1,
-	api_key => $api_key,
-	secret => $secret,
-);
-
-
+# FB_AUTH method, used to auth irssibook to facebook
 sub fb_auth
 {
-	my ($text, $server, $dest) = @_;
+  my ($text, $server, $dest) = @_;
 
-	if (Irssi::settings_get_bool('irssibook_authed'))
-	{
-		Irssi::active_win()->print("You have already authed Irssibook to facebook, you should only do this once! If you would like to do this anyway please '/set irssibook_authed OFF' first...");
-	}
-	else
-	{
-			#my $token = $client->auth->create_token;
-			my $token = my $token = $client->auth->login( sleep => 20 );
-			$client->auth->get_session( $token );
-
-			Irssi::settings_set_str('irssibook_session_uid', $client->session_uid);
-			Irssi::settings_set_str('irssibook_session_key', $client->session_key);
-			Irssi::settings_set_str('irssibook_session_expires', $client->session_expires);
-			Irssi::settings_set_str('irssibook_user_secret', $client->secret);
-			Irssi::settings_set_bool('irssibook_authed', 1);
-
-			Irssi::active_win()->print("Now please go to:");
-			Irssi::active_win()->print("http://www.facebook.com/authorize.php?api_key=$api_key&v=1.0&ext_perm=offline_access,user_status");
-			Irssi::active_win()->print("To allow this application access to update your status");
-	}
+  if (Irssi::settings_get_bool('irssibook_authed'))
+  {
+    Irssi::active_win()->print("You have already authed Irssibook to facebook, you should only do this once! If you would like to do this anyway please '/set irssibook_authed OFF' first...");
+  }
+  else
+  {
+    if ($text =~ /.+/) {
+      my $token = $text;
+      $token =~ s/http\:\/\/www.facebook.com\/connect\/login_success\.html\#access_token=//;
+      $token =~ s/&expires_in=0//;
+      Irssi::settings_set_str('irssibook_access_token', $token);
+      Irssi::settings_set_bool('irssibook_authed', 1);
+    }
+    else
+    {
+      Irssi::active_win()->print("Step 1: Open the following URL in your browser, click allow, and copy the URL when the page displays Success");
+      Irssi::active_win()->print("URL: https://graph.facebook.com/oauth/authorize?client_id=$api_key&redirect_uri=http://www.facebook.com/connect/login_success.html&type=user_agent&display=popup&scope=offline_access,publish_stream,read_stream");
+      Irssi::active_win()->print("Step 2: Use /irssibook_auth <URL> (the WHOLE url you copied) to set your access token.");
+      Irssi::active_win()->print("Step 3: WIN!");
+    }
+  }
 }
 
+# FB_SETSTATUS method, used to set / get facebook status
 sub fb_setStatus
 {
-	my ($text, $server, $dest) = @_;
-
-	if (Irssi::settings_get_bool('irssibook_authed'))
-	{
-		$client->session_key(Irssi::settings_get_str('irssibook_session_key'));
-		$client->session_uid(Irssi::settings_get_str('irssibook_session_uid'));
-		$client->session_expires(Irssi::settings_get_str('irssibook_session_expires'));
-		$client->secret(Irssi::settings_get_str('irssibook_user_secret'));
-
-		if ($text) 
-		{
-			eval
-			{
-				if ($text =~ /^-clear$/) 
-				{
-					$client->users->set_status( clear => 1 );
-				} 
-				else 
-				{
-					$client->users->set_status( status => "$text", 'status_includes_verb' => 1 );
-				}
-			};
-
-			if ($@)
-			{
-				Irssi::active_win()->print("Error, perhaps you forgot to allow this application access to update your status?");
-				Irssi::active_win()->print("Go to:");
-				Irssi::active_win()->print("http://www.facebook.com/authorize.php?api_key=$api_key&v=1.0&ext_perm=status_update");
-			}
-			else 
-			{	
-				if ($text =~ /^-clear$/) 
-				{
-					Irssi::active_win()->print("Your facebook status was cleared successfully.");
-				} 
-				else 
-				{
-					Irssi::active_win()->print("Your facebook status was updated successfully.");
-				}
-			}
-		}
-		else 
-		{
-			my $whatStatus = $client->users->get_info(
-				uids => Irssi::settings_get_str('irssibook_session_uid'),
-				fields => 'status'
-			);
-			Irssi::active_win()->print("Your facebook status is: ".%{@$whatStatus[0]}->{status}{message});
-		}
-	}
-	else
-	{
-		Irssi::active_win()->print("Please, make sure you are logged in to facebook and go to:");
-		Irssi::active_win()->print("http://www.facebook.com/code_gen.php?v=1.0&api_key=$api_key");
-		Irssi::active_win()->print("Copy the code, and use /irssibook_auth <code>");
-	}
+  my ($text, $server, $dest) = @_;
+  if (Irssi::settings_get_bool('irssibook_authed'))
+  {
+    my $access_token = Irssi::settings_get_str('irssibook_access_token');
+    if ($text) 
+    {
+      eval
+      {
+        $ua->post('https://graph.facebook.com/me/feed',{access_token => $access_token, message => $text});
+      };
+      if ($@)
+      {
+        Irssi::active_win()->print("Error, perhaps you forgot to allow this application access to update your status?");
+        Irssi::active_win()->print("Use /irssibook_auth !");
+      }
+      else 
+      {	
+        Irssi::active_win()->print("Your facebook status was updated successfully.");
+      }
+    }
+    else 
+    {
+      my $response = $ua->get("https://graph.facebook.com/me/posts?access_token=$access_token&fields=message&limit=1");
+      my %decoded_json = %{ decode_json($response->content) };
+      my %dataHash = %{ $decoded_json{data}[0]};
+      Irssi::active_win()->print("Your latest facebook status is: ".$dataHash{message});
+    }
+  }
+  else
+  {
+    Irssi::active_win()->print("Please, make sure you used the /irssibook_auth command!");
+  }
 }
 
 Irssi::active_win()->print("Irssibook $VERSION loaded.");
 Irssi::active_win()->print("Please start with /irssibook_auth!");
-Irssi::active_win()->print("Irssibook supports: Check status with /fbstatus || Set status with /fbstatus message || Clear status with /fbstatus -clear");
+Irssi::active_win()->print("Irssibook supports: Check status with /fbstatus || Set status with /fbstatus <message>");
+Irssi::active_win()->print("http://projects.bdeferme.net/projects/irssibook");
 
-Irssi::settings_add_str('irssibook','irssibook_session_uid', '');
-Irssi::settings_add_str('irssibook','irssibook_session_key', '');
-Irssi::settings_add_str('irssibook','irssibook_session_expires','');
-Irssi::settings_add_str('irssibook','irssibook_user_secret','');
+Irssi::settings_add_str('irssibook','irssibook_access_token','');
 Irssi::settings_add_bool('irssibook','irssibook_authed',0);
 
 Irssi::command_bind('irssibook_auth','fb_auth');
