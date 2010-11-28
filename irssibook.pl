@@ -41,7 +41,8 @@ sub fb_auth
 	}
 	else
 	{
-			my $token = $client->auth->create_token;
+			#my $token = $client->auth->create_token;
+			my $token = my $token = $client->auth->login( sleep => 20 );
 			$client->auth->get_session( $token );
 
 			Irssi::settings_set_str('irssibook_session_uid', $client->session_uid);
