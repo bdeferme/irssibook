@@ -41,7 +41,7 @@ sub fb_auth
 	}
 	else
 	{
-		if ($text !~ /.+/)
+		if ($text !~ /.*/)
 		{
 			Irssi::active_win()->print("Please, make sure you are logged in to facebook and go to:");
 			Irssi::active_win()->print("https://graph.facebook.com/oauth/authorize?client_id=$api_key&type=user_agent&display=popup");
