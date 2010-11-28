@@ -59,7 +59,7 @@ sub fb_auth
 			Irssi::settings_set_bool('irssibook_authed', 1);
 
 			Irssi::active_win()->print("Now please go to:");
-			Irssi::active_win()->print("http://www.facebook.com/authorize.php?api_key=$api_key&v=1.0&ext_perm=status_update");
+			Irssi::active_win()->print("http://www.facebook.com/authorize.php?api_key=$api_key&v=1.0&ext_perm=offline_access,user_status");
 			Irssi::active_win()->print("To allow this application access to update your status");
 		}
 	}
