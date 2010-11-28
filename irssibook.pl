@@ -41,12 +41,11 @@ sub fb_auth
 	}
 	else
 	{
-		if ($text !~ /.{6,6}/)
+		if ($text !~ /.{1}+/)
 		{
 			Irssi::active_win()->print("Please, make sure you are logged in to facebook and go to:");
-			Irssi::active_win()->print("https://graph.facebook.com/oauth/authorize?client_id=$api_key");
-			#Irssi::active_win()->print("http://www.facebook.com/code_gen.php?v=1.0&api_key=$api_key");
-			Irssi::active_win()->print("Copy the code, and use /irssibook_auth <code>");
+			Irssi::active_win()->print("https://graph.facebook.com/oauth/authorize?client_id=$api_key&type=user_agent&display=popup");
+			Irssi::active_win()->print("Copy everything after #access_token= until &expires in, this is your acces token. Now use /irssibook_auth <access token>"
 		}
 		else
 		{
