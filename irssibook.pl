@@ -41,7 +41,7 @@ sub fb_auth
     if ($text =~ /.+/) {
       my $token = $text;
       $token =~ s/http\:\/\/www.facebook.com\/connect\/login_success\.html\#access_token=//;
-      $token =~ s/&expires_in=0//;
+      $token =~ s/&expires_in.+$//;
       Irssi::settings_set_str('irssibook_access_token', $token);
       Irssi::settings_set_bool('irssibook_authed', 1);
     }
